@@ -78,7 +78,7 @@ def reply_specified_post(page, post_url, reply_content):
              print(f"第{reply_idx}次回复失败（已重试3次）")
          time.sleep(4) # 每次回复间隔拉长，避免风控+断连
      print("4次回复任务执行完毕！\n")
-
+    
 if __name__ == "__main__":
     print("程序开始运行")
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     notice = ''
 
 
-    co = ChromiumOptions()
+    co = ChromiumOptions().headless()
     chromium_path = shutil.which("chromium-browser")
     if chromium_path:
         co.set_browser_path(chromium_path)
