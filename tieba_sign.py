@@ -20,7 +20,6 @@ def read_cookie():
 def get_level_exp(page):
     """获取等级和经验，兼容不同页面结构"""
     level, exp = "未知", "未知"
-    # 兼容新老页面xpath，提高容错
     level_eles = [
         '//*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[1]/a/div[2]',
         '//div[contains(@class,"user-level")]/span'
@@ -61,7 +60,7 @@ def send_tieba_comment(page, post_url, comment_content):
         page.wait.loaded(timeout=20)
         time.sleep(1)  # 缓冲加载
 
-        # 1. 定位评论输入框（兼容新老页面，容错高）
+        # 1. 定位评论输入框
         comment_input = page.ele(xpath='//textarea[@id="ueditor_replace"]', timeout=10)
         if not comment_input:
             comment_input = page.ele(xpath='//textarea[contains(@class,"comment-input")]', timeout=5)
@@ -72,7 +71,7 @@ def send_tieba_comment(page, post_url, comment_content):
         comment_input.input(comment_content)
         time.sleep(0.8)  # 避免输入过快
 
-        # 3. 定位并点击发送按钮（兼容多样式）
+        # 3. 定位并点击发送按钮
         send_btn = page.ele(xpath='//button[contains(text(),"发表")]', timeout=10)
         if not send_btn:
             send_btn = page.ele(xpath='//input[@value="发表回复" or @value="发表评论"]', timeout=5)
@@ -99,9 +98,8 @@ def send_tieba_comment(page, post_url, comment_content):
 if __name__ == "__main__":
     print("程序开始运行")
     notice = ''
-    co = ChromiumOptions().headless()  # 无头模式，后台运行
+    co = ChromiumOptions().headless()
 
-    # 适配不同系统浏览器路径
     chromium_path = shutil.which("chromium-browser") or shutil.which("chrome") or shutil.which("msedge")
     if chromium_path:
         co.set_browser_path(chromium_path)
@@ -109,13 +107,12 @@ if __name__ == "__main__":
     page = ChromiumPage(co)
     url = "https://tieba.baidu.com/"
     
-    # 登录核心流程：先访问再设cookie，避免失效
     page.get(url)
     cookies = read_cookie()
     if cookies:
         page.set.cookies(cookies)
         page.refresh()
-    page.wait.loaded(timeout=15)  # 替换废弃的_wait_loaded
+    page.wait.loaded(timeout=15)
 
     over = False
     yeshu = 0
@@ -127,12 +124,10 @@ if __name__ == "__main__":
         page.get(forum_url)
         page.wait.loaded(timeout=15)
 
-        # 循环范围改为1-20（原2-21会漏第一个），兼容分页数量不足情况
         for i in range(1, 21):
-            # 优化贴吧链接定位，提高稳定性
             ele_xpath = f'//*[@id="like_pagelet"]/div[1]/div[1]/table/tbody/tr[{i}]/td[1]/a'
             element = page.ele(xpath=ele_xpath)
-            if not element:  # 无元素说明本页爬完，直接下一页
+            if not element:
                 break
 
             try:
@@ -148,7 +143,7 @@ if __name__ == "__main__":
                 page.get(tieba_url)
                 page.wait.loaded(timeout=20)
 
-                # 签到状态判断（兼容已签到/未签到/异常状态）
+                # 签到状态判断
                 sign_wrapper = page.ele(xpath='//*[@id="signstar_wrapper"]/a/span[1]', timeout=10)
                 if not sign_wrapper:
                     msg = f"{name}吧：页面无签到模块，跳过"
@@ -161,7 +156,7 @@ if __name__ == "__main__":
                     continue
 
                 is_sign_text = sign_wrapper.text.strip()
-                # 已签到判断（包含"连续""已签到"等关键词）
+                # 已签到判断
                 if any(key in is_sign_text for key in ["连续", "已签到", "天"]):
                     level, exp = get_level_exp(page)
                     msg = f"{name}吧：已签到！等级：{level}，经验：{exp}"
@@ -201,7 +196,7 @@ if __name__ == "__main__":
                 print("-------------------------------------------------")
                 continue
 
-        # 分页判断：本页不足20个，说明已爬完所有贴吧
+        # 分页判断
         if i < 19:
             over = True
             msg = f"全部爬取完成！本次共处理 {count} 个吧"
@@ -210,25 +205,23 @@ if __name__ == "__main__":
 
     page.quit()  # 彻底关闭浏览器，释放资源
     
-    #指定帖子评论+3
-    target_post_url = "https://tieba.baidu.com/p/9983496041"  # 你的目标帖子链接
-    my_comment = "3"  # 你的指定评论内容
-     if cookies:  # 有cookie才执行（避免未登录）
-         # 重新打开浏览器发评论（原浏览器已关闭）
-         comment_page = ChromiumPage(co)
-         comment_page.get("https://tieba.baidu.com/")
-         comment_page.set.cookies(cookies)
-         comment_page.refresh()
-         # 调用评论函数
-         for i in range(1, 5):  # 1-4 共4次
-             print(f"执行第{i}次评论")
-             comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
-             print(f"第{i}次评论结果：{comment_result}")
-             notice += f"第{i}次：{comment_result}\n"
-             # 间隔8秒，避免被风控（最后1次不用等）
-             if i < 4:
-                 time.sleep(8) 
-             comment_page.quit()  # 关闭评论专用浏览器
+    # 指定帖子评论
+    target_post_url = "https://tieba.baidu.com/p/9983496041"
+    my_comment = "3"
+    if cookies:
+        comment_page = ChromiumPage(co)
+        comment_page.get("https://tieba.baidu.com/")
+        comment_page.set.cookies(cookies)
+        comment_page.refresh()
+        for i in range(1, 5):
+            print(f"执行第{i}次评论")
+            comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
+            print(f"第{i}次评论结果：{comment_result}")
+            notice += f"第{i}次：{comment_result}\n"
+            # 间隔8秒，避免被风控
+            if i < 4:
+                time.sleep(8) 
+        comment_page.quit()
     else:
         no_comment_msg = "未执行评论：Cookie未配置/未登录"
         print(no_comment_msg)
