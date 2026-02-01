@@ -112,7 +112,7 @@ if __name__ == "__main__":
     if cookies:
         page.set.cookies(cookies)
         page.refresh()
-    page.wait.loaded(timeout=15)
+    page.wait.page_loaded(timeout=15)
 
     over = False
     yeshu = 0
