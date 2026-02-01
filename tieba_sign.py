@@ -209,8 +209,32 @@ if __name__ == "__main__":
             notice += msg + '\n\n'
 
     page.quit()  # 彻底关闭浏览器，释放资源
+    
+    #指定帖子评论+3
+    target_post_url = "https://tieba.baidu.com/p/9983496041"  # 你的目标帖子链接
+     my_comment = "3"  # 你的指定评论内容
+     if cookies:  # 有cookie才执行（避免未登录）
+         # 重新打开浏览器发评论（原浏览器已关闭）
+         comment_page = ChromiumPage(co)
+         comment_page.get("https://tieba.baidu.com/")
+         comment_page.set.cookies(cookies)
+         comment_page.refresh()
+         # 调用评论函数
+         for i in range(1, 5):  # 1-4 共4次
+             print(f"执行第{i}次评论")
+             comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
+             print(f"第{i}次评论结果：{comment_result}")
+             notice += f"第{i}次：{comment_result}\n"
+             # 间隔8秒，避免被风控（最后1次不用等）
+             if i < 4:
+                 time.sleep(8) 
+             comment_page.quit()  # 关闭评论专用浏览器
+    else:
+        no_comment_msg = "未执行评论：Cookie未配置/未登录"
+        print(no_comment_msg)
+        notice += f"\n{no_comment_msg}"
 
-    # Server酱通知（保持原逻辑）
+    # Server酱通知
     if "SendKey" in os.environ:
         api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
         title = "贴吧签到信息"
