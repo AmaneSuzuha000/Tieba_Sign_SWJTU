@@ -212,7 +212,7 @@ if __name__ == "__main__":
     
     #指定帖子评论+3
     target_post_url = "https://tieba.baidu.com/p/9983496041"  # 你的目标帖子链接
-     my_comment = "3"  # 你的指定评论内容
+    my_comment = "3"  # 你的指定评论内容
      if cookies:  # 有cookie才执行（避免未登录）
          # 重新打开浏览器发评论（原浏览器已关闭）
          comment_page = ChromiumPage(co)
