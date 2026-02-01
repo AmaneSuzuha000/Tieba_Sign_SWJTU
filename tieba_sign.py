@@ -57,7 +57,7 @@ def send_tieba_comment(page, post_url, comment_content):
     try:
         # 打开目标帖子
         page.get(post_url)
-        page._wait_loaded(timeout=20)
+        page.wait.loaded(timeout=20)
         time.sleep(1)  # 缓冲加载
 
         # 1. 定位评论输入框
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     if cookies:
         page.set.cookies(cookies)
         page.refresh()
-    page._wait_loaded(timeout=15)
+    page.wait.loaded(timeout=15)
 
     over = False
     yeshu = 0
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         yeshu += 1
         forum_url = f"https://tieba.baidu.com/i/i/forum?pn={yeshu}"
         page.get(forum_url)
-        page._wait_loaded(timeout=15)
+        page.wait.loaded(timeout=15)
 
         for i in range(1, 21):
             ele_xpath = f'//*[@id="like_pagelet"]/div[1]/div[1]/table/tbody/tr[{i}]/td[1]/a'
@@ -141,7 +141,7 @@ if __name__ == "__main__":
 
             try:
                 page.get(tieba_url)
-                page._wait_loaded(timeout=20)
+                page.wait.loaded(timeout=20)
 
                 # 签到状态判断
                 sign_wrapper = page.ele(xpath='//*[@id="signstar_wrapper"]/a/span[1]', timeout=10)
@@ -168,7 +168,7 @@ if __name__ == "__main__":
                         sign_btn.click()
                         time.sleep(1.5)  # 延长等待，确保签到请求发送
                         page.refresh()
-                        page._wait_loaded(timeout=10)
+                        page.wait.loaded(timeout=10)
                         # 签到后校验
                         new_sign_text = page.ele('//*[@id="signstar_wrapper"]/a/span[1]').text.strip()
                         level, exp = get_level_exp(page)
@@ -183,7 +183,7 @@ if __name__ == "__main__":
                 
                 count +=1
                 page.back()
-                page._wait_loaded(timeout=10)
+                page.wait.loaded(timeout=10)
                 time.sleep(0.5)  # 防反爬
                 print("-------------------------------------------------")
             except Exception as e:
