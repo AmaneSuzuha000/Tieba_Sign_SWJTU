@@ -29,44 +29,55 @@ def get_level_exp(page):
 
 # 新增：指定帖子循环回复4次的函数
 def reply_specified_post(page, post_url, reply_content):
-    """
-    指定帖子循环回复4次
-    :param page: 浏览器页面对象
-    :param post_url: 目标帖子完整链接（必填）
-    :param reply_content: 要回复的内容（必填）
-    """
-    print(f"\n开始对目标帖子执行4次回复，内容：{reply_content}")
-    # 循环回复4次
-    for reply_idx in range(1, 5):
-        try:
-            # 每次回复前重新打开帖子，避免页面状态异常
-            page.get(post_url)
-            page._wait_loaded(10)
-            
-            # 定位回复输入框（适配贴吧默认回复框）
-            reply_input = page.ele('xpath://textarea[@class="j_paste copyable"]', timeout=20)
-            if not reply_input:
-                print(f"第{reply_idx}次回复失败：未找到回复输入框")
-                continue
-            
-            # 输入回复内容
-            reply_input.input(reply_content)
-            time.sleep(1)  # 输入后延迟，避免过快提交
-            
-            # 定位回复提交按钮并点击
-            submit_btn = page.ele('xpath://button[@class="btn btn_submit j_submit"]', timeout=15)
-            if submit_btn:
-                submit_btn.click()
-                time.sleep(2)  # 提交后延迟，确保回复成功
-                print(f"第{reply_idx}次回复成功！")
-            else:
-                print(f"第{reply_idx}次回复失败：未找到提交按钮")
-            
-        except Exception as e:
-            print(f"第{reply_idx}次回复异常：{str(e)}")
-        # 回复间隔，避免风控
-        time.sleep(3)
-    print("4次回复任务执行完毕！\n")
+     """
+     指定帖子循环回复4次（修复连接断开问题）
+     :param page: 浏览器页面对象
+     :param post_url: 目标帖子完整链接
+     :param reply_content: 要回复的内容
+     """
+     print(f"\n开始对目标帖子执行4次回复，内容：{reply_content}")
+     for reply_idx in range(1, 5):
+         retry = 3  # 单次回复重试3次
+         success = False
+         while retry > 0 and not success:
+             try:
+                 # 重新打开页面，强制等待加载完成
+                 page.get(post_url)
+                 page.wait.load_start(timeout=10)  # 等待页面开始加载
+                 page.wait.load_complete(timeout=20) # 等待页面完全加载
+                 time.sleep(2) # 额外延迟，避免连接不稳
+                 # 定位回复框（兼容贴吧新版/旧版）
+                 reply_input = page.ele('xpath://textarea[@class="j_paste copyable"]', timeout=15)
+                 if not reply_input:
+                     reply_input = page.ele('xpath://textarea[contains(@class,"post_content")]', timeout=10)
+                 if not reply_input:
+                     print(f"第{reply_idx}次回复：未找到回复输入框")
+                     break
+                 # 清空输入框+输入内容（避免残留）
+                 reply_input.clear()
+                 reply_input.input(reply_content)
+                 time.sleep(1)
+                 # 定位提交按钮（多选择器兼容）
+                 submit_btn = page.ele('xpath://button[@class="btn btn_submit j_submit"]', timeout=10)
+                 if not submit_btn:
+                     submit_btn = page.ele('xpath://a[@class="btn_submit"]', timeout=5)
+                 if submit_btn:
+                     submit_btn.click()
+                     time.sleep(3) # 提交后延迟，确保成功+稳定连接
+                     print(f"第{reply_idx}次回复成功！")
+                     success = True
+                 else:
+                     print(f"第{reply_idx}次回复：未找到提交按钮")
+                     retry -=1
+                     time.sleep(2)
+             except Exception as e:
+                 retry -=1
+                 print(f"第{reply_idx}次回复重试({3-retry}/3)，异常：{str(e)}")
+                 time.sleep(3) # 重试前延迟，恢复连接
+         if not success:
+             print(f"第{reply_idx}次回复失败（已重试3次）")
+         time.sleep(4) # 每次回复间隔拉长，避免风控+断连
+     print("4次回复任务执行完毕！\n")
 
 if __name__ == "__main__":
     print("程序开始运行")
@@ -75,7 +86,7 @@ if __name__ == "__main__":
     notice = ''
 
 
-    co = ChromiumOptions().headless()
+    co = ChromiumOptions()
     chromium_path = shutil.which("chromium-browser")
     if chromium_path:
         co.set_browser_path(chromium_path)
