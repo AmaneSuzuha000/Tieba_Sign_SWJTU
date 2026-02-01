@@ -47,6 +47,55 @@ def get_level_exp(page):
             continue
     return level, exp
 
+def send_tieba_comment(page, post_url, comment_content):
+    """
+    贴吧指定帖子发评论
+    page: 浏览器页面对象
+    post_url: 目标帖子完整链接
+    comment_content: 要发送的评论内容
+    return: 评论结果消息
+    """
+    try:
+        # 打开目标帖子
+        page.get(post_url)
+        page.wait.loaded(timeout=20)
+        time.sleep(1)  # 缓冲加载
+
+        # 1. 定位评论输入框（兼容新老页面，容错高）
+        comment_input = page.ele(xpath='//textarea[@id="ueditor_replace"]', timeout=10)
+        if not comment_input:
+            comment_input = page.ele(xpath='//textarea[contains(@class,"comment-input")]', timeout=5)
+        if not comment_input:
+            return "失败：未找到评论输入框（页面结构可能更新）"
+
+        # 2. 输入评论内容
+        comment_input.input(comment_content)
+        time.sleep(0.8)  # 避免输入过快
+
+        # 3. 定位并点击发送按钮（兼容多样式）
+        send_btn = page.ele(xpath='//button[contains(text(),"发表")]', timeout=10)
+        if not send_btn:
+            send_btn = page.ele(xpath='//input[@value="发表回复" or @value="发表评论"]', timeout=5)
+        if not send_btn:
+            return "失败：未找到发表按钮"
+
+        send_btn.click()
+        time.sleep(2)  # 等待发送请求完成
+
+        # 4. 校验是否发送成功（判断提示）
+        success_msg = page.ele(xpath='//div[contains(text(),"回复成功") or contains(text(),"评论成功")]', timeout=5)
+        error_msg = page.ele(xpath='//div[contains(text(),"失败") or contains(text(),"请登录") or contains(text(),"违规")]', timeout=3)
+        
+        if success_msg:
+            return f"成功：评论已发送，内容【{comment_content}】"
+        elif error_msg:
+            return f"失败：{error_msg.text.strip()}"
+        else:
+            return "成功：评论提交（无明确提示，大概率发送成功）"
+
+    except Exception as e:
+        return f"异常失败：{str(e)}"
+
 if __name__ == "__main__":
     print("程序开始运行")
     notice = ''
