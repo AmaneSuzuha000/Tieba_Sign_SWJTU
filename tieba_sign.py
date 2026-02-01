@@ -8,47 +8,28 @@ import requests
 def read_cookie():
     """读取 cookie，优先从环境变量读取"""
     if "TIEBA_COOKIES" in os.environ:
-        try:
-            return json.loads(os.environ["TIEBA_COOKIES"])
-        except Exception as e:
-            print(f"Cookie解析失败：{e}")
-            return []
+        return json.loads(os.environ["TIEBA_COOKIES"])
     else:
         print("贴吧Cookie未配置！详细请参考教程！")
         return []
 
 def get_level_exp(page):
-    """获取等级和经验，兼容不同页面结构"""
-    level, exp = "未知", "未知"
-    level_eles = [
-        '//*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[1]/a/div[2]',
-        '//div[contains(@class,"user-level")]/span'
-    ]
-    exp_eles = [
-        '//*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[2]/a/div[2]/span[1]',
-        '//div[contains(@class,"user-exp")]/span[1]'
-    ]
-    for ele_xpath in level_eles:
-        try:
-            level_ele = page.ele(xpath=ele_xpath)
-            if level_ele:
-                level = level_ele.text.strip()
-                break
-        except:
-            continue
-    for ele_xpath in exp_eles:
-        try:
-            exp_ele = page.ele(xpath=ele_xpath)
-            if exp_ele:
-                exp = exp_ele.text.strip()
-                break
-        except:
-            continue
+    """获取等级和经验，如果找不到返回'未知'"""
+    try:
+        level_ele = page.ele('xpath://*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[1]/a/div[2]').text
+        level = level_ele if level_ele else "未知"
+    except:
+        level = "未知"
+    try:
+        exp_ele = page.ele('xpath://*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[2]/a/div[2]/span[1]').text
+        exp = exp_ele if exp_ele else "未知"
+    except:
+        exp = "未知"
     return level, exp
 
 def send_tieba_comment(page, post_url, comment_content):
     """
-    贴吧指定帖子发评论
+    贴吧指定帖子发评论（保留你的核心逻辑）
     page: 浏览器页面对象
     post_url: 目标帖子完整链接
     comment_content: 要发送的评论内容
@@ -57,7 +38,7 @@ def send_tieba_comment(page, post_url, comment_content):
     try:
         # 打开目标帖子
         page.get(post_url)
-        page.wait.loaded(timeout=20)
+        page._wait_loaded(15)
         time.sleep(1)  # 缓冲加载
 
         # 1. 定位评论输入框
@@ -67,7 +48,8 @@ def send_tieba_comment(page, post_url, comment_content):
         if not comment_input:
             return "失败：未找到评论输入框（页面结构可能更新）"
 
-        # 2. 输入评论内容
+        # 2. 清空+输入评论内容（新增clear，避免残留内容）
+        comment_input.clear()
         comment_input.input(comment_content)
         time.sleep(0.8)  # 避免输入过快
 
@@ -97,22 +79,24 @@ def send_tieba_comment(page, post_url, comment_content):
 
 if __name__ == "__main__":
     print("程序开始运行")
-    notice = ''
-    co = ChromiumOptions().headless()
 
-    chromium_path = shutil.which("chromium-browser") or shutil.which("chrome") or shutil.which("msedge")
+    # 通知信息
+    notice = ''
+
+
+    co = ChromiumOptions().headless()
+    chromium_path = shutil.which("chromium-browser")
     if chromium_path:
         co.set_browser_path(chromium_path)
 
     page = ChromiumPage(co)
+
     url = "https://tieba.baidu.com/"
-    
     page.get(url)
-    cookies = read_cookie()
-    if cookies:
-        page.set.cookies(cookies)
-        page.refresh()
-    page.wait.loaded(timeout=15)
+    page.set.cookies(read_cookie())
+    page.refresh()
+    page._wait_loaded(15)
+
 
     over = False
     yeshu = 0
@@ -120,125 +104,107 @@ if __name__ == "__main__":
 
     while not over:
         yeshu += 1
-        forum_url = f"https://tieba.baidu.com/i/i/forum?pn={yeshu}"
-        page.get(forum_url)
-        page.wait.loaded(timeout=15)
+        page.get(f"https://tieba.baidu.com/i/i/forum?&pn={yeshu}")
 
-        for i in range(1, 21):
-            ele_xpath = f'//*[@id="like_pagelet"]/div[1]/div[1]/table/tbody/tr[{i}]/td[1]/a'
-            element = page.ele(xpath=ele_xpath)
-            if not element:
-                break
+        page._wait_loaded(15)
 
+        for i in range(2, 22):
+            element = page.ele(
+                f'xpath://*[@id="like_pagelet"]/div[1]/div[1]/table/tbody/tr[{i}]/td[1]/a/@href'
+            )
             try:
                 tieba_url = element.attr("href")
-                name = element.attr("title").strip() if element.attr("title") else f"未知贴吧{i}"
-                if not tieba_url.startswith("http"):
-                    tieba_url = f"https://tieba.baidu.com{tieba_url}"
-            except Exception as e:
-                print(f"获取贴吧链接失败：{e}")
-                continue
-
-            try:
-                page.get(tieba_url)
-                page.wait.loaded(timeout=20)
-
-                # 签到状态判断
-                sign_wrapper = page.ele(xpath='//*[@id="signstar_wrapper"]/a/span[1]', timeout=10)
-                if not sign_wrapper:
-                    msg = f"{name}吧：页面无签到模块，跳过"
-                    print(msg)
-                    notice += msg + '\n\n'
-                    count +=1
-                    page.back()
-                    time.sleep(0.5)  # 降低访问频率，避免风控
-                    print("-------------------------------------------------")
-                    continue
-
-                is_sign_text = sign_wrapper.text.strip()
-                # 已签到判断
-                if any(key in is_sign_text for key in ["连续", "已签到", "天"]):
-                    level, exp = get_level_exp(page)
-                    msg = f"{name}吧：已签到！等级：{level}，经验：{exp}"
-                    print(msg)
-                    notice += msg + '\n\n'
-                else:  # 未签到，执行签到
-                    sign_btn = page.ele(xpath='//a[contains(@class,"j_signbtn") and contains(@class,"j_cansign")]', timeout=10)
-                    if sign_btn:
-                        sign_btn.click()
-                        time.sleep(1.5)  # 延长等待，确保签到请求发送
-                        page.refresh()
-                        page.wait.loaded(timeout=10)
-                        # 签到后校验
-                        new_sign_text = page.ele('//*[@id="signstar_wrapper"]/a/span[1]').text.strip()
-                        level, exp = get_level_exp(page)
-                        if any(key in new_sign_text for key in ["连续", "已签到"]):
-                            msg = f"{name}吧：签到成功！等级：{level}，经验：{exp}"
-                        else:
-                            msg = f"{name}吧：签到触发验证，需手动处理！"
-                    else:
-                        msg = f"{name}吧：无可用签到按钮（可能需验证/权限不足）"
-                    print(msg)
-                    notice += msg + '\n\n'
-                
-                count +=1
-                page.back()
-                page.wait.loaded(timeout=10)
-                time.sleep(0.5)  # 防反爬
-                print("-------------------------------------------------")
-            except Exception as e:
-                msg = f"{name}吧：签到异常 - {str(e)}"
+                name = element.attr("title")
+            except:
+                msg = f"全部爬取完成！本次总共签到 {count} 个吧..."
                 print(msg)
                 notice += msg + '\n\n'
-                count +=1
-                page.back()
-                time.sleep(1)
+                page.close()
+                over = True
+                break
+
+            page.get(tieba_url)
+            
+
+            page.wait.eles_loaded('xpath://*[@id="signstar_wrapper"]/a/span[1]',timeout=30)
+
+
+            # 判断是否签到
+            is_sign_ele = page.ele('xpath://*[@id="signstar_wrapper"]/a/span[1]')
+            is_sign = is_sign_ele.text if is_sign_ele else ""
+            if is_sign.startswith("连续"):
+                level, exp = get_level_exp(page)
+                msg = f"{name}吧：已签到过！等级：{level}，经验：{exp}"
+                print(msg)
+                notice += msg + '\n\n'
                 print("-------------------------------------------------")
-                continue
+            else:
+                page.wait.eles_loaded('xpath://a[@class="j_signbtn sign_btn_bright j_cansign"]',timeout=30)
+                sign_ele = page.ele('xpath://a[@class="j_signbtn sign_btn_bright j_cansign"]')
+                if sign_ele:
+                    sign_ele.click()
+                    time.sleep(1)  # 等待签到动作完成
+                    sign_ele.click()
+                    time.sleep(1)  # 等待签到动作完成
+                    page.refresh()
 
-        # 分页判断
-        if i < 19:
-            over = True
-            msg = f"全部爬取完成！本次共处理 {count} 个吧"
-            print(msg)
-            notice += msg + '\n\n'
+                    page._wait_loaded(15)
 
-    page.quit()  # 彻底关闭浏览器，释放资源
-    
-    # 指定帖子评论
-    target_post_url = "https://tieba.baidu.com/p/9983496041"
-    my_comment = "3"
-    if cookies:
+                    level, exp = get_level_exp(page)
+                    msg = f"{name}吧：成功！等级：{level}，经验：{exp}"
+                    print(msg)
+                    notice += msg + '\n\n'
+                    print("-------------------------------------------------")
+                else:
+                    msg = f"错误！{name}吧：找不到签到按钮，可能页面结构变了"
+                    print(msg)
+                    notice += msg + '\n\n'
+                    print("-------------------------------------------------")
+
+            count += 1
+            page.back()
+            page._wait_loaded(10)
+
+    #指定帖子评论+3
+    target_post_url = "https://tieba.baidu.com/p/9983496041"  # 你的目标帖子链接
+    my_comment = "3"  # 你的指定评论内容
+    if cookies:  # 有cookie才执行（避免未登录）
+        # 重新打开浏览器发评论（原浏览器已关闭）
         comment_page = ChromiumPage(co)
         comment_page.get("https://tieba.baidu.com/")
         comment_page.set.cookies(cookies)
         comment_page.refresh()
-        for i in range(1, 5):
-            print(f"执行第{i}次评论")
-            comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
-            print(f"第{i}次评论结果：{comment_result}")
-            notice += f"第{i}次：{comment_result}\n"
-            # 间隔8秒，避免被风控
-            if i < 4:
-                time.sleep(8) 
-        comment_page.quit()
+        # 调用评论函数
+        for i in range(1, 5):  # 1-4 共4次
+             print(f"执行第{i}次评论")
+             comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
+             print(f"第{i}次评论结果：{comment_result}")
+             notice += f"第{i}次：{comment_result}\n"
+             # 间隔8秒，避免被风控（最后1次不用等）
+             if i < 4:
+                 time.sleep(8) 
+             comment_page.quit()  # 关闭评论专用浏览器
     else:
         no_comment_msg = "未执行评论：Cookie未配置/未登录"
         print(no_comment_msg)
         notice += f"\n{no_comment_msg}"
 
-    # Server酱通知
+
     if "SendKey" in os.environ:
         api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
-        title = "贴吧签到信息"
-        data = {"text": title, "desp": notice}
+        title = u"贴吧签到信息"
+        data = {
+        "text":title,
+        "desp":notice
+        }
         try:
             req = requests.post(api, data=data, timeout=60)
             if req.status_code == 200:
                 print("Server酱通知发送成功")
             else:
                 print(f"通知失败，状态码：{req.status_code}")
+                print(api)
         except Exception as e:
             print(f"通知发送异常：{e}")
     else:
-        print("未配置Server酱服务，跳过通知")
+        print("未配置Server酱服务...")
