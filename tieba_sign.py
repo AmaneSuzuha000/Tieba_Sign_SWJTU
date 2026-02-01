@@ -27,55 +27,46 @@ def get_level_exp(page):
         exp = "未知"
     return level, exp
 
-def send_tieba_comment(page, post_url, comment_content):
+# 新增：指定帖子循环回复4次的函数
+def reply_specified_post(page, post_url, reply_content):
     """
-    贴吧指定帖子发评论（保留你的核心逻辑）
-    page: 浏览器页面对象
-    post_url: 目标帖子完整链接
-    comment_content: 要发送的评论内容
-    return: 评论结果消息
+    指定帖子循环回复4次
+    :param page: 浏览器页面对象
+    :param post_url: 目标帖子完整链接（必填）
+    :param reply_content: 要回复的内容（必填）
     """
-    try:
-        # 打开目标帖子
-        page.get(post_url)
-        page._wait_loaded(15)
-        time.sleep(1)  # 缓冲加载
-
-        # 1. 定位评论输入框
-        comment_input = page.ele(xpath='//textarea[@id="ueditor_replace"]', timeout=10)
-        if not comment_input:
-            comment_input = page.ele(xpath='//textarea[contains(@class,"comment-input")]', timeout=5)
-        if not comment_input:
-            return "失败：未找到评论输入框（页面结构可能更新）"
-
-        # 2. 清空+输入评论内容（新增clear，避免残留内容）
-        comment_input.clear()
-        comment_input.input(comment_content)
-        time.sleep(0.8)  # 避免输入过快
-
-        # 3. 定位并点击发送按钮
-        send_btn = page.ele(xpath='//button[contains(text(),"发表")]', timeout=10)
-        if not send_btn:
-            send_btn = page.ele(xpath='//input[@value="发表回复" or @value="发表评论"]', timeout=5)
-        if not send_btn:
-            return "失败：未找到发表按钮"
-
-        send_btn.click()
-        time.sleep(2)  # 等待发送请求完成
-
-        # 4. 校验是否发送成功（判断提示）
-        success_msg = page.ele(xpath='//div[contains(text(),"回复成功") or contains(text(),"评论成功")]', timeout=5)
-        error_msg = page.ele(xpath='//div[contains(text(),"失败") or contains(text(),"请登录") or contains(text(),"违规")]', timeout=3)
-        
-        if success_msg:
-            return f"成功：评论已发送，内容【{comment_content}】"
-        elif error_msg:
-            return f"失败：{error_msg.text.strip()}"
-        else:
-            return "成功：评论提交（无明确提示，大概率发送成功）"
-
-    except Exception as e:
-        return f"异常失败：{str(e)}"
+    print(f"\n开始对目标帖子执行4次回复，内容：{reply_content}")
+    # 循环回复4次
+    for reply_idx in range(1, 5):
+        try:
+            # 每次回复前重新打开帖子，避免页面状态异常
+            page.get(post_url)
+            page._wait_loaded(10)
+            
+            # 定位回复输入框（适配贴吧默认回复框）
+            reply_input = page.ele('xpath://textarea[@class="j_paste copyable"]', timeout=20)
+            if not reply_input:
+                print(f"第{reply_idx}次回复失败：未找到回复输入框")
+                continue
+            
+            # 输入回复内容
+            reply_input.input(reply_content)
+            time.sleep(1)  # 输入后延迟，避免过快提交
+            
+            # 定位回复提交按钮并点击
+            submit_btn = page.ele('xpath://button[@class="btn btn_submit j_submit"]', timeout=15)
+            if submit_btn:
+                submit_btn.click()
+                time.sleep(2)  # 提交后延迟，确保回复成功
+                print(f"第{reply_idx}次回复成功！")
+            else:
+                print(f"第{reply_idx}次回复失败：未找到提交按钮")
+            
+        except Exception as e:
+            print(f"第{reply_idx}次回复异常：{str(e)}")
+        # 回复间隔，避免风控
+        time.sleep(3)
+    print("4次回复任务执行完毕！\n")
 
 if __name__ == "__main__":
     print("程序开始运行")
@@ -164,31 +155,16 @@ if __name__ == "__main__":
             count += 1
             page.back()
             page._wait_loaded(10)
-
-    #指定帖子评论+3
-    target_post_url = "https://tieba.baidu.com/p/9983496041"  # 你的目标帖子链接
-    my_comment = "3"  # 你的指定评论内容
-    if cookies:  # 有cookie才执行（避免未登录）
-        # 重新打开浏览器发评论（原浏览器已关闭）
-        comment_page = ChromiumPage(co)
-        comment_page.get("https://tieba.baidu.com/")
-        comment_page.set.cookies(cookies)
-        comment_page.refresh()
-        # 调用评论函数
-        for i in range(1, 5):  # 1-4 共4次
-             print(f"执行第{i}次评论")
-             comment_result = send_tieba_comment(comment_page, target_post_url, my_comment)
-             print(f"第{i}次评论结果：{comment_result}")
-             notice += f"第{i}次：{comment_result}\n"
-             # 间隔8秒，避免被风控（最后1次不用等）
-             if i < 4:
-                 time.sleep(8) 
-             comment_page.quit()  # 关闭评论专用浏览器
+    
+    # ===================== 新增：签到完成后执行4次回复 =====================
+    # 需修改这里的 帖子链接 和 回复内容（必填！）
+    TARGET_POST_URL = "https://tieba.baidu.com/p/9983496041"  # 替换成你的目标帖子完整链接
+    REPLY_CONTENT = "3"                            # 替换成你要回复的文本
+    if TARGET_POST_URL != "https://tieba.baidu.com/p/xxxxxxxxxxx" and REPLY_CONTENT:
+        reply_specified_post(page, TARGET_POST_URL, REPLY_CONTENT)
     else:
-        no_comment_msg = "未执行评论：Cookie未配置/未登录"
-        print(no_comment_msg)
-        notice += f"\n{no_comment_msg}"
-
+        print("未配置目标帖子链接或回复内容，跳过回复任务")
+    # ======================================================================
 
     if "SendKey" in os.environ:
         api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
