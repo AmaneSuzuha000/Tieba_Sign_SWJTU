@@ -34,16 +34,9 @@ class TiebaReplyApi:
     def __init__(self, cookies):
         self.base_url = "https://tieba.baidu.com"
         self.session = requests.Session()
-        # 转换DrissionPage Cookie格式为requests可用
         cookie_dict = {c['name']: c['value'] for c in cookies if 'name' in c and 'value' in c}
         self.session.cookies.update(cookie_dict)
-        # 贴吧接口通用请求头
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': self.base_url,
-            'Accept': 'application/json, text/javascript, */*; q=0.01',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        self.headers = {'User-Agent': 'Mozilla/5.0','Cookie': cookie_dict}
 
     def get_tbs(self):
         """获取接口必备tbs参数，带异常处理"""
