@@ -186,36 +186,36 @@ if __name__ == "__main__":
             count += 1
             page.back()
             page._wait_loaded(10)
-     # ===================== 核心配置区=====================
-     TARGET_FORUM = "西南交通大学"  # 目标贴吧名（例：轨道交通吧 → 填轨道交通，去掉「吧」字）
-     TARGET_TID = "9983496041"  # 目标帖子ID（例：https://tieba.baidu.com/p/1234567890 → 填1234567890）
-     REPLY_CONTENT = "3"        # 要回复的内容（自定义，如3、打卡等）
-     # ==========================================================================
-     # 调用接口回复功能
-     if TARGET_FORUM and TARGET_TID and REPLY_CONTENT:
-         tieba_api = TiebaReplyApi(cookies)
-         success_num = tieba_api.loop_reply(TARGET_FORUM, TARGET_TID, REPLY_CONTENT)
-         # 将回复结果加入通知，Server酱会同步推送
-         notice += f"\n指定帖子回复结果：【{TARGET_FORUM}吧】ID{TARGET_TID}，共4次，成功{success_num}次，失败{4-success_num}次"
-     else:
-         print("未正确配置回复参数，跳过回复任务")
-         notice += "\n未正确配置回复参数，跳过回复任务"
-     # ===================== 原代码：Server酱通知逻辑（完全未改动） =====================
-     if "SendKey" in os.environ:
-         api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
-         title = u"贴吧签到信息"
-         data = {
-         "text":title,
-         "desp":notice
-         }
-         try:
-             req = requests.post(api, data=data, timeout=60)
-             if req.status_code == 200:
-                 print("Server酱通知发送成功")
-             else:
-                 print(f"通知失败，状态码：{req.status_code}")
-                 print(api)
-         except Exception as e:
-             print(f"通知发送异常：{e}")
-     else:
-         print("未配置Server酱服务...")
+    # ===================== 核心配置区=====================
+    TARGET_FORUM = "西南交通大学"  # 目标贴吧名（例：轨道交通吧 → 填轨道交通，去掉「吧」字）
+    TARGET_TID = "9983496041"  # 目标帖子ID（例：https://tieba.baidu.com/p/1234567890 → 填1234567890）
+    REPLY_CONTENT = "3"        # 要回复的内容（自定义，如3、打卡等）
+    # ==========================================================================
+    # 调用接口回复功能
+    if TARGET_FORUM and TARGET_TID and REPLY_CONTENT:
+        tieba_api = TiebaReplyApi(cookies)
+        success_num = tieba_api.loop_reply(TARGET_FORUM, TARGET_TID, REPLY_CONTENT)
+        # 将回复结果加入通知，Server酱会同步推送
+        notice += f"\n指定帖子回复结果：【{TARGET_FORUM}吧】ID{TARGET_TID}，共4次，成功{success_num}次，失败{4-success_num}次"
+    else:
+        print("未正确配置回复参数，跳过回复任务")
+        notice += "\n未正确配置回复参数，跳过回复任务"
+    # ===================== 原代码：Server酱通知逻辑（完全未改动） =====================
+    if "SendKey" in os.environ:
+        api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
+        title = u"贴吧签到信息"
+        data = {
+        "text":title,
+        "desp":notice
+        }
+        try:
+            req = requests.post(api, data=data, timeout=60)
+            if req.status_code == 200:
+                print("Server酱通知发送成功")
+            else:
+                print(f"通知失败，状态码：{req.status_code}")
+                print(api)
+        except Exception as e:
+            print(f"通知发送异常：{e}")
+    else:
+        print("未配置Server酱服务...")
