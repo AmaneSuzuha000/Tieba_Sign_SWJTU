@@ -1,2 +1,2 @@
-DrissionPage==4.1.0.18
+DrissionPage
 requests
