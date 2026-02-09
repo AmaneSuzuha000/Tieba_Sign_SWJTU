@@ -71,10 +71,12 @@ if __name__ == "__main__":
     if sign_box:
         sign_box.click()
         print("签到成功")
-    
+        
+    """
     TARGET_POST_URL = "https://tieba.baidu.com/p/9983496041"  # 目标帖子链接
     REPLY_CONTENT = "3"  # 回复文本
     reply_specified_post(page, TARGET_POST_URL, REPLY_CONTENT)
+    """
     
     if "SendKey" in os.environ:
         api = f'https://sc.ftqq.com/{os.environ["SendKey"]}.send'
