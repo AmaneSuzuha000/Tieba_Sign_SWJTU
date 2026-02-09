@@ -12,19 +12,6 @@ def read_cookie():
         print("贴吧Cookie未配置！")
         return []
 
-def get_level_exp(page):
-    try:
-        level_ele = page.ele('xpath://*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[1]/a/div[2]').text
-        level = level_ele if level_ele else "未知"
-    except:
-        level = "未知"
-    try:
-        exp_ele = page.ele('xpath://*[@id="pagelet_aside/pagelet/my_tieba"]/div/div[1]/div[3]/div[2]/a/div[2]/span[1]').text
-        exp = exp_ele if exp_ele else "未知"
-    except:
-        exp = "未知"
-    return level, exp
-
 def reply_specified_post(page, post_url, reply_content):
     print(f"\n开始对目标帖子执行4次回复，内容：{reply_content}")
     for reply_idx in range(1, 5):
@@ -76,74 +63,15 @@ if __name__ == "__main__":
     page.refresh()
     page._wait_loaded(15)
 
-
-    over = False
-    yeshu = 0
-    count = 0
-    is_first_tieba = True
-    while not over:
-        yeshu += 1
-        page.get(f"https://tieba.baidu.com/i/i/forum?&pn={yeshu}")
-
-        page._wait_loaded(15)
-
-        for i in range(2, 22):
-            element = page.ele(
-                f'xpath://*[@id="like_pagelet"]/div[1]/div[1]/table/tbody/tr[{i}]/td[1]/a/@href'
-            )
-            try:
-                tieba_url = element.attr("href")
-                name = element.attr("title")
-            except:
-                msg = f"全部爬取完成！本次总共签到 {count} 个吧..."
-                print(msg)
-                notice += msg + '\n\n'
-                over = True
-                break
-
-            page.get(tieba_url)
-            if is_first_tieba:
-                page.refresh()
-                page._wait_loaded(3)
-                is_first_tieba = False
-            page.wait.eles_loaded('xpath://*[@id="signstar_wrapper"]/a/span[1]', timeout=30)
-
-            # 判断是否签到
-            is_sign_ele = page.ele('xpath://*[@id="signstar_wrapper"]/a/span[1]')
-            is_sign = is_sign_ele.text if is_sign_ele else ""
-            if is_sign.startswith("连续"):
-                level, exp = get_level_exp(page)
-                msg = f"{name}吧：已签到过！等级：{level}，经验：{exp}"
-                print(msg)
-                notice += msg + '\n\n'
-                print("-------------------------------------------------")
-            else:
-                page.wait.eles_loaded('xpath://a[@class="j_signbtn sign_btn_bright j_cansign"]', timeout=30)
-                sign_ele = page.ele('xpath://a[@class="j_signbtn sign_btn_bright j_cansign"]')
-                if sign_ele:
-                    sign_ele.click()
-                    time.sleep(1)  # 等待签到动作完成
-                    sign_ele.click()
-                    time.sleep(1)  # 等待签到动作完成
-                    page.refresh()
-
-                    page._wait_loaded(15)
-
-                    level, exp = get_level_exp(page)
-                    msg = f"{name}吧：成功！等级：{level}，经验：{exp}"
-                    print(msg)
-                    notice += msg + '\n\n'
-                    print("-------------------------------------------------")
-                else:
-                    msg = f"错误！{name}吧：找不到签到按钮，可能页面结构变了"
-                    print(msg)
-                    notice += msg + '\n\n'
-                    print("-------------------------------------------------")
-
-            count += 1
-            page.back()
-            page._wait_loaded(10)
-
+    onekey_box = page.ele('xpath://*[@id="onekey_sign"]/a', timeout=10)
+    if onekey_box:
+        onekey_box.click()
+        print("找到一键签到按钮")
+    sign_box = page.ele('xpath://*[@id="dialogJbody"]/div/div/div[1]/a', timeout=10)
+    if sign_box:
+        sign_box.click()
+        print("签到成功")
+    
     TARGET_POST_URL = "https://tieba.baidu.com/p/9983496041"  # 目标帖子链接
     REPLY_CONTENT = "3"  # 回复文本
     reply_specified_post(page, TARGET_POST_URL, REPLY_CONTENT)
