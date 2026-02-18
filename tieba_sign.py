@@ -53,7 +53,7 @@ def reply_specified_post(page, post_url, reply_content):
 if __name__ == "__main__":
     print("程序开始运行")
     notice = ''
-    co = ChromiumOptions()
+    co = ChromiumOptions().headless()
     chromium_path = shutil.which("chromium-browser")
     if chromium_path:
         co.set_browser_path(chromium_path)
