@@ -12,6 +12,8 @@ def read_cookie():
         print("贴吧Cookie未配置！")
         return []
 
+#因网页端经验值少于移动端而弃用
+'''
 def reply_specified_post(page, post_url, reply_content):
     print(f"\n开始对目标帖子执行4次回复，内容：{reply_content}")
     for reply_idx in range(1, 5):
@@ -46,11 +48,12 @@ def reply_specified_post(page, post_url, reply_content):
             print(f"第{reply_idx}次回复异常：{str(e)}")
         time.sleep(5)
     print("4次回复任务执行完毕！\n")
+'''
     
 if __name__ == "__main__":
     print("程序开始运行")
     notice = ''
-    co = ChromiumOptions().headless()
+    co = ChromiumOptions()
     chromium_path = shutil.which("chromium-browser")
     if chromium_path:
         co.set_browser_path(chromium_path)
@@ -59,21 +62,24 @@ if __name__ == "__main__":
 
     url = "https://tieba.baidu.com/"
     page.get(url)
+    print('已打开贴吧网页')
     page.set.cookies(read_cookie())
     page.refresh()
-    page._wait_loaded(15)
+    page._wait_loaded(5)
     page.refresh()
     page._wait_loaded(15)
-    page.refresh()
-    
-    onekey_box = page.ele('xpath://*[@id="onekey_sign"]/a', timeout=10)
+
+    onekey_box = page.ele('xpath://*[@id="onekey_sign"]/a',timeout=10)
     if onekey_box:
         onekey_box.click()
-        print("找到一键签到按钮")
-    sign_box = page.ele('xpath://*[@id="dialogJbody"]/div/div/div[1]/a', timeout=10)
+        print('找到一键签到按钮')
+    sign_box = page.ele('xpath://*[@id="dialogJbody"]/div/div/div[1]/a',timeout=10)
     if sign_box:
         sign_box.click()
-        print("签到成功")
+        print('签到成功')
+    complete_box=page.ele('xpath://*[@id="dialogJbody"]/div/div/div[1]/span',timeout=10)
+    if complete_box:
+        print('已签到')
         
     """
     TARGET_POST_URL = "https://tieba.baidu.com/p/9983496041"  # 目标帖子链接
