@@ -66,15 +66,7 @@ if __name__ == "__main__":
     page.set.cookies(read_cookie())
     page.refresh()
     page._wait_loaded(15)
-
-    onekey_box = page.ele('xpath://*[@id="onekey_sign"]/a',timeout=10)
-    if onekey_box:
-        onekey_box.click()
-        print('找到按钮')
-        
-    page.refresh()
-    page._wait_loaded(15)
-
+    
     onekey_box = page.ele('xpath://*[@id="onekey_sign"]/a',timeout=10)
     if onekey_box:
         onekey_box.click()
