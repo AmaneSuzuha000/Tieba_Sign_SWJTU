@@ -1,0 +1,38 @@
+name: Tieba Sign
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 1 * * *"
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run sign task
+        env:
+          TIEBA_COOKIES: ${{ secrets.TIEBA_COOKIES }}
+          TIEBA_BDUSS: ${{ secrets.TIEBA_BDUSS }}
+          TIEBA_STOKEN: ${{ secrets.TIEBA_STOKEN }}
+          TIEBA_BAIDUID: ${{ secrets.TIEBA_BAIDUID }}
+          TIEBA_USE_OFFICIAL_MSIGN: ${{ vars.TIEBA_USE_OFFICIAL_MSIGN || 'true' }}
+          TIEBA_SLOW_MODE: ${{ vars.TIEBA_SLOW_MODE || 'false' }}
+          TIEBA_SIGN_DELAY_MS: ${{ vars.TIEBA_SIGN_DELAY_MS || '2000' }}
+          TIEBA_FAIL_ON_PARTIAL_FAILURE: ${{ vars.TIEBA_FAIL_ON_PARTIAL_FAILURE || 'false' }}
+          TIEBA_REQUEST_TIMEOUT: ${{ vars.TIEBA_REQUEST_TIMEOUT || '30' }}
+          TIEBA_DRY_RUN: ${{ vars.TIEBA_DRY_RUN || 'false' }}
+          TIEBA_DEVICE_SEED: ${{ secrets.TIEBA_DEVICE_SEED }}
+        run: python main.py
