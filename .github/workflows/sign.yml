@@ -3,7 +3,7 @@ name: Tieba Sign
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 13 * * *"
+    - cron: "00 16 * * *"
 
 jobs:
   sign:
